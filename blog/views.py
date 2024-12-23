@@ -1,9 +1,11 @@
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, CreateAPIView, UpdateAPIView, DestroyAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated, BasePermission, IsAdminUser
 from rest_framework.views import APIView
 from rest_framework import viewsets, status
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
 from . import serializers
@@ -78,19 +80,29 @@ from . import serializers
 #     permission_classes = [AuthorValidateAPIView, IsAdminUser]
 
 class UserAPIViewSet(viewsets.ModelViewSet):
-    queryset = serializers.User.objects.all()
+    queryset = get_user_model().objects.all()
     serializer_class = serializers.UserSerializer
+    authentication_classes = [JWTAuthentication]
+
+    def get_object(self):
+        obj = super().get_object()
+        print("Current user:", self.request.user)  # Debug uchun
+        print("Auth:", self.request.auth)  # Debug uchun
+        return obj
 
     def perform_update(self, serializer):
         user = self.get_object()
-        if user != self.request.user or self.request.user.is_staff:
+        print("Request user:", self.request.user)  # Debug uchun
+        print("Target user:", user)  # Debug uchun
+
+        if user != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("You can only edit your own data.")
         serializer.save()
 
     def perform_destroy(self, instance):
         user = self.get_object()
-        if user != self.request.user or self.request.user.is_staff:
-            raise PermissionDenied("You can only delete your own data.")
+        if user != self.request.user and not self.request.user.is_staff:
+            raise PermissionDenied("You can only delete your own account.")
         instance.delete()
 
 class PostAPIViewSet(viewsets.ModelViewSet):
@@ -99,15 +111,15 @@ class PostAPIViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         post = self.get_object()
-        if post.author != self.request.user or self.request.user.is_staff:
+        if post.author != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("You can only edit your posts.")
         serializer.save()
 
-    def perform_destroy(self, serializer):
+    def perform_destroy(self, instance):
         post = self.get_object()
-        if post.author != self.request.user or self.request.user.is_staff:
+        if post.author != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("You can only edit your posts.")
-        serializer.save()
+        instance.delete()
 
 class CommentAPIViewSet(viewsets.ModelViewSet):
     queryset = serializers.Comment.objects.all()
@@ -115,15 +127,15 @@ class CommentAPIViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         comment = self.get_object()
-        if comment.user != self.request.user or self.request.user.is_staff:
+        if comment.user != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("You can only edit your comments.")
         serializer.save()
 
-    def perform_destroy(self, serializer):
+    def perform_destroy(self, instance):
         comment = self.get_object()
-        if comment.user != self.request.user or self.request.user.is_staff:
+        if comment.user != self.request.user and not self.request.user.is_staff:
             raise PermissionDenied("You can only edit your comments.")
-        serializer.save()
+        instance.delete()
 
 class SearchPostAPIViewSet(APIView):
     queryset = serializers.BlogPost.objects.all()
