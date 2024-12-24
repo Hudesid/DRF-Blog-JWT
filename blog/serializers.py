@@ -8,7 +8,7 @@ from rest_framework.response import Response
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'password')
+        fields = ['id', 'username', 'email', 'password']
 
     def create(self, validated_data):
         user = User.objects.create(
@@ -22,9 +22,14 @@ class UserSerializer(serializers.ModelSerializer):
             user=user,
             profile_image=validated_data.get('profile_image', None),
         )
+
         following_users = validated_data.get('following', [])
+        unfollowing_user = validated_data.get('unfollowing', [])
+
         if following_users:
             user_profile.following.set(following_users)
+        if unfollowing_user:
+            user_profile.following.remove(unfollowing_user)
         return user_profile, Response({
             "message": "Foydalanuvchi muvaffaqiyatli ro'yxatdan o'tdi",
             "user_id": user.id
@@ -41,27 +46,41 @@ class BlogPostSerializer(serializers.ModelSerializer):
     def get_count(self, obj):
         return len(obj.title)
 
-    def create(self, validated_data):
-        user = self.context['request'].user
-        posts = BlogPost.objects.create(
-            author = user,
-            **validated_data
-        )
-        posts.save()
-        return posts
-
     def to_representation(self, instance):
         representation = super().to_representation(instance)
         representation['author'] = UserSerializer(instance.author).data
         return representation
 
+    def to_internal_value(self, data):
+        internal_value = super().to_internal_value(data)
+        if 'author' in data:
+            try:
+                author = User.objects.get(id=data['author'])
+                internal_value['author'] = author
+            except User.DoesNotExist:
+                raise serializers.ValidationError({'author': 'Invalid author ID.'})
+        return internal_value
+
 
 class CommentSerializer(serializers.ModelSerializer):
-    post = BlogPostSerializer(read_only=True)
-
     class Meta:
         model = Comment
         fields = ('id', 'user', 'post', 'created_at', 'updated_at', 'comment')
+
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['post'] = BlogPostSerializer(instance.post).data
+        return representation
+
+    def to_internal_value(self, data):
+        internal_value = super().to_internal_value(data)
+        if 'post' in data:
+            try:
+                post = BlogPost.objects.get(id=data['post'])
+                internal_value['post'] = post
+            except BlogPost.DoesNotExist:
+                raise serializers.ValidationError({'post': 'Invalid post ID.'})
+        return internal_value
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
