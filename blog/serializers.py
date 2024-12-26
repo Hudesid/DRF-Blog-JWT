@@ -18,23 +18,53 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_password(validated_data['password'])
         user.save()
 
-        user_profile = UserProfile.objects.create(
-            user=user,
-            profile_image=validated_data.get('profile_image', None),
+        UserProfile.objects.create(
+            user=user
         )
+        return user
 
-        following_users = validated_data.get('following', [])
-        unfollowing_user = validated_data.get('unfollowing', [])
 
-        if following_users:
-            user_profile.following.set(following_users)
-        if unfollowing_user:
-            user_profile.following.remove(unfollowing_user)
-        return user_profile, Response({
-            "message": "Foydalanuvchi muvaffaqiyatli ro'yxatdan o'tdi",
-            "user_id": user.id
-        }, status=status.HTTP_201_CREATED)
+class UserProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer()
+    profile_image = serializers.ImageField(required=False, allow_null=True)
+    following = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
+    followers = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), many=True, required=False)
 
+    class Meta:
+        model = UserProfile
+        fields = ('id', 'profile_image', 'following', 'followers', 'user')
+
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            email = user_data.get('email')
+            username = user_data.get('username')
+            password = user_data.get('password')
+            if email:
+                if User.objects.filter(email=email).exclude(id=instance.user.id).exists():
+                    raise serializers.ValidationError({"user": {"email": "A user with that email already exists."}})
+
+                instance.user.email = email
+                instance.user.save()
+
+            if username:
+                if User.objects.filter(username=username).exclude(id=instance.user.id).exists():
+                    raise serializers.ValidationError({"user": {"username": "A user with that username already exists."}})
+
+                instance.user.username = username
+                instance.user.save()
+
+            if password:
+                if User.objects.filter(password=password).exclude(id=instance.user.id).exists():
+                    raise serializers.ValidationError({"user": {"password": "A user with that password already exists."}})
+
+                instance.user.set_password(password)
+                instance.user.save()
+
+        following_data = validated_data.get('following', None)
+        if following_data is not None:
+            instance.following.remove(following_data)
+        return super().update(instance, validated_data)
 
 class BlogPostSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField()
