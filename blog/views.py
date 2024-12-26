@@ -56,7 +56,7 @@ class UserRetrieveAPIView(BaseUserAPIView, RetrieveAPIView):
     User ni detalni ko'rish uchun uchun APIView.
     """
 
-class UserUpdateAPIView(BaseUserAPIView, UpdateAPIView):
+class UserUpdateAPIView(BaseUserAPIView, CreateAPIView):
     """
     User ni yangilash uchun APIView.
     """

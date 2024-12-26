@@ -35,36 +35,25 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ('id', 'profile_image', 'following', 'followers', 'user')
 
     def update(self, instance, validated_data):
-        user_data = validated_data.pop('user', None)
-        if user_data:
-            email = user_data.get('email')
-            username = user_data.get('username')
-            password = user_data.get('password')
-            if email:
-                if User.objects.filter(email=email).exclude(id=instance.user.id).exists():
-                    raise serializers.ValidationError({"user": {"email": "A user with that email already exists."}})
-
-                instance.user.email = email
-                instance.user.save()
-
-            if username:
-                if User.objects.filter(username=username).exclude(id=instance.user.id).exists():
-                    raise serializers.ValidationError({"user": {"username": "A user with that username already exists."}})
-
-                instance.user.username = username
-                instance.user.save()
-
-            if password:
-                if User.objects.filter(password=password).exclude(id=instance.user.id).exists():
-                    raise serializers.ValidationError({"user": {"password": "A user with that password already exists."}})
-
-                instance.user.set_password(password)
-                instance.user.save()
-
         following_data = validated_data.get('following', None)
         if following_data is not None:
-            instance.following.remove(following_data)
+            instance.following.remove(*following_data)
         return super().update(instance, validated_data)
+
+    # def to_representation(self, instance):
+    #     representation = super().to_representation(instance)
+    #     representation['user'] = UserSerializer(instance.user).data
+    #     return representation
+
+    # def to_internal_value(self, data):
+    #     internal_value = super().to_internal_value(data)
+    #     if 'user' in data:
+    #         try:
+    #             user = User.objects.get(id=data['user'])
+    #             internal_value['user'] = user
+    #         except User.DoesNotExist:
+    #             raise serializers.ValidationError({'user': 'Invalid user ID.'})
+    #     return internal_value
 
 class BlogPostSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField()
