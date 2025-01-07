@@ -1,18 +1,16 @@
 from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import BlogPost, UserProfile, Comment, User
-from rest_framework.response import Response
 
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['id', 'email', 'password']
 
     def create(self, validated_data):
         user = User.objects.create(
-            username=validated_data['username'],
             email=validated_data['email']
         )
         user.set_password(validated_data['password'])
@@ -35,10 +33,19 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ('id', 'profile_image', 'following', 'followers', 'user')
 
     def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', None)
+        if user_data:
+            user_instance = instance.user
+            for attr, value in user_data.items():
+                setattr(user_instance, attr, value)
+                user_instance.set_password(value)
+            user_instance.save()
         following_data = validated_data.get('following', None)
         if following_data is not None:
-            instance.following.remove(*following_data)
-        return super().update(instance, validated_data)
+            instance.following.remove(*following_data['unfollowed'])
+            instance.following.add(*following_data['followed'])
+
+        return instance
 
     # def to_representation(self, instance):
     #     representation = super().to_representation(instance)

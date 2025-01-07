@@ -69,13 +69,13 @@ class UserDestroyAPIView(DestroyAPIView):
     """
     queryset = serializers.User.objects.all()
     serializer_class = serializers.UserSerializer
-    permission_classes = [AuthorValidateAPIView or IsAdminUser]
+    permission_classes = [AuthorValidateAPIView]
 
 class BlogPostCreateAPIView(CreateAPIView, BaseBlogAPIView):
     """
     Post ni yaratish uchun APIView.
     """
-    permission_classes = [IsAuthenticated or IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
 class BlogPostListAPIView(ListAPIView, BaseBlogAPIView):
     """
@@ -91,19 +91,19 @@ class BlogPostUpdateAPIView(UpdateAPIView, BaseBlogAPIView):
     """
     Post ni yangilash uchun APIView.
     """
-    permission_classes = [AuthorValidateAPIView or IsAdminUser]
+    permission_classes = [AuthorValidateAPIView]
 
 class BlogPostDestroyAPIView(DestroyAPIView, BaseBlogAPIView):
     """
     Post ni o'chirish uchun APIView.
     """
-    permission_classes = [AuthorValidateAPIView or IsAdminUser]
+    permission_classes = [AuthorValidateAPIView]
 
 class CommentCreateAPIView(CreateAPIView, BaseCommentAPIView):
     """
     Comment ni yaratish uchun APIView.
     """
-    permission_classes = [IsAuthenticated or IsAdminUser]
+    permission_classes = [IsAuthenticated]
 
 class CommentListAPIView(ListAPIView, BaseCommentAPIView):
     """
@@ -114,13 +114,13 @@ class CommentUpdateAPIView(UpdateAPIView, BaseCommentAPIView):
     """
     Comment ni yangilsh uchun APIView.
     """
-    permission_classes = [AuthorValidateAPIView or IsAdminUser]
+    permission_classes = [AuthorValidateAPIView]
 
 class CommentDestroyAPIView(DestroyAPIView, BaseCommentAPIView):
     """
     Comment ni o'chirish uchun APIView.
     """
-    permission_classes = [AuthorValidateAPIView or IsAdminUser]
+    permission_classes = [AuthorValidateAPIView]
 
 
 # class UserAPIViewSet(viewsets.ModelViewSet):

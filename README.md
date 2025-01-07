@@ -13,9 +13,9 @@ Bu Blog loyihasida siz register dan o'tishingiz keyin login dan o'tgandan so'ng 
 ```bash and another
 pip install django
 
-pip install djngorestframework
+pip install djangorestframework
 
-pip install djangorestfraework-simplejwt
+pip install djangorestframework-simplejwt
 
 pip install Pillow
 ```
