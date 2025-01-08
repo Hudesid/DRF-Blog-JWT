@@ -7,10 +7,11 @@ from .models import BlogPost, UserProfile, Comment, User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'password']
+        fields = ['id', 'username', 'email', 'password']
 
     def create(self, validated_data):
         user = User.objects.create(
+            username = validated_data['username'],
             email=validated_data['email']
         )
         user.set_password(validated_data['password'])
@@ -110,8 +111,14 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        email = attrs.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            raise serializers.ValidationError('Email not found')
+
+        self.user = user
         data = super().validate(attrs)
-        user = self.user
         data['user_id'] = user.id
         if user.is_superuser:
             data['role'] = 'admin'
