@@ -1,3 +1,4 @@
+from django.contrib.auth import authenticate
 from rest_framework import serializers, status
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import BlogPost, UserProfile, Comment, User
@@ -7,7 +8,7 @@ from .models import BlogPost, UserProfile, Comment, User
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'password']
+        fields = ['username', 'email', 'password']
 
     def create(self, validated_data):
         user = User.objects.create(
@@ -16,6 +17,9 @@ class UserSerializer(serializers.ModelSerializer):
         )
         user.set_password(validated_data['password'])
         user.save()
+        # Bu yo'li ham bor:
+
+        # user = User.objects.create_user(email=validated_data['email'], username=validated_data['username'], password=validated_data['password'])
 
         UserProfile.objects.create(
             user=user
@@ -110,18 +114,24 @@ class CommentSerializer(serializers.ModelSerializer):
         return internal_value
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    def validate(self, attrs):
-        email = attrs.get('email')
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            raise serializers.ValidationError('Email not found')
+    username_field = 'email'
 
-        self.user = user
+    def validate(self, attrs):
+        authenticate_kwargs = {
+            self.username_field: attrs[self.username_field],
+            'password': attrs['password'],
+        }
+        try:
+            authenticate_kwargs['request'] = self.context['request']
+        except KeyError:
+            raise serializers.ValidationError("Email not found")
+
+        user = authenticate(**authenticate_kwargs)
+
+        if user is None or not user.is_active:
+            raise serializers.ValidationError(
+                'No active account found with the given credentials'
+            )
+
         data = super().validate(attrs)
-        data['user_id'] = user.id
-        if user.is_superuser:
-            data['role'] = 'admin'
-        else:
-            data['role'] = 'user'
         return data
